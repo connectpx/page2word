@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Page2Word</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <main>
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true">P2W</span>
+        <span>Page2Word</span>
+      </div>
+      <p class="eyebrow">ARTICLE TO WORD</p>
+      <h1>Turn a page into a document</h1>
+      <p>
+        Extract an article, make edits, and export a polished Word document.
+      </p>
+      <button type="button" id="extract">Extract &amp; Open Editor</button>
+      <button type="button" id="extract-browser" class="secondary">
+        Extract with Writing Assistants
+      </button>
+      <p id="server-status" class="mode-note" role="status" aria-live="polite">
+        The editor server is checked when you choose this option.
+      </p>
+      <button type="button" id="open-editor" class="secondary">
+        Open Editor
+      </button>
+      <p id="status" role="status" aria-live="polite"></p>
+      <a href="../options/options.html" target="_blank">Formatting settings</a>
+      <p class="privacy-note">Your content stays in this browser.</p>
+    </main>
+    <script src="popup.js"></script>
+  </body>
+</html>

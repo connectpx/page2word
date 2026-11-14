@@ -1,0 +1,25 @@
+{
+  "manifest_version": 3,
+  "name": "Page2Word",
+  "version": "0.1.0",
+  "description": "Extract an article, edit it with your favorite tools, and export to Word.",
+  "action": {
+    "default_popup": "popup/popup.html"
+  },
+  "options_page": "options/options.html",
+  "background": {
+    "service_worker": "background/service-worker.js",
+    "type": "module"
+  },
+  "permissions": ["activeTab", "scripting", "storage", "unlimitedStorage"],
+  "host_permissions": ["<all_urls>"],
+  "content_scripts": [
+    {
+      "matches": [
+        "http://localhost:5173/*"
+      ],
+      "js": ["bridge/editor-bridge.js"],
+      "run_at": "document_start"
+    }
+  ]
+}

@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Page2Word Settings</title>
+    <link rel="stylesheet" href="options.css" />
+  </head>
+  <body>
+    <header class="page-header">
+      <a class="brand" href="../popup/popup.html">
+        <span class="brand-mark" aria-hidden="true">P2W</span>
+        <span>Page2Word</span>
+      </a>
+      <span class="header-label">Extension settings</span>
+    </header>
+    <main>
+      <section class="settings-card" aria-labelledby="settings-title">
+        <div class="card-heading">
+          <p class="eyebrow">DOCUMENT FORMAT</p>
+          <h1 id="settings-title">Formatting settings</h1>
+          <p class="description">
+            Set the defaults used in the editor and in new Word exports.
+            Font-size numbers are points in Word and matching pixels in the
+            editor. Choose whether original website links are kept or removed.
+          </p>
+        </div>
+        <form id="settings-form">
+          <div class="settings-grid">
+            <label class="field" for="font-family">
+              <span>Font family</span>
+              <select id="font-family">
+                <option>Times New Roman</option>
+                <option>Arial</option>
+                <option>Calibri</option>
+                <option>Georgia</option>
+              </select>
+            </label>
+            <label class="field" for="font-size-pt">
+              <span>Body text size</span>
+              <span class="input-unit">
+                <input
+                  id="font-size-pt"
+                  type="number"
+                  min="6"
+                  max="72"
+                  step="0.5"
+                  required
+                />
+                <span>pt</span>
+              </span>
+            </label>
+            <label class="field" for="title-font-size-pt">
+              <span>Main title size</span>
+              <span class="input-unit">
+                <input
+                  id="title-font-size-pt"
+                  type="number"
+                  min="6"
+                  max="72"
+                  step="0.5"
+                  required
+                />
+                <span>pt</span>
+              </span>
+            </label>
+            <label class="field" for="heading-font-size-pt">
+              <span>Heading size</span>
+              <span class="input-unit">
+                <input
+                  id="heading-font-size-pt"
+                  type="number"
+                  min="6"
+                  max="72"
+                  step="0.5"
+                  required
+                />
+                <span>pt</span>
+              </span>
+            </label>
+            <label class="field" for="subheading-font-size-pt">
+              <span>Subheading size</span>
+              <span class="input-unit">
+                <input
+                  id="subheading-font-size-pt"
+                  type="number"
+                  min="6"
+                  max="72"
+                  step="0.5"
+                  required
+                />
+                <span>pt</span>
+              </span>
+            </label>
+            <label class="field" for="table-font-size-pt">
+              <span>Table text size</span>
+              <span class="input-unit">
+                <input
+                  id="table-font-size-pt"
+                  type="number"
+                  min="6"
+                  max="72"
+                  step="0.5"
+                  required
+                />
+                <span>pt</span>
+              </span>
+            </label>
+            <label class="field" for="line-spacing">
+              <span>Line spacing</span>
+              <span class="input-unit">
+                <input
+                  id="line-spacing"
+                  type="number"
+                  min="0.8"
+                  max="3"
+                  step="0.1"
+                  required
+                />
+                <span>×</span>
+              </span>
+            </label>
+            <label class="field" for="alignment">
+              <span>Body alignment</span>
+              <select id="alignment">
+                <option value="justify">Justified</option>
+                <option value="left">Left</option>
+              </select>
+            </label>
+            <label class="field" for="original-links">
+              <span>Original site links</span>
+              <select id="original-links">
+                <option value="remove">Remove</option>
+                <option value="keep">Keep</option>
+              </select>
+            </label>
+          </div>
+          <p class="style-note">
+            Titles are centered and bold; headings are bold. Tables use a
+            borderless layout with rules above and below the header. Figure
+            captions retain their original label, use body text size, are
+            left-aligned, and have a separator. Figure and table references
+            navigate within the article.
+          </p>
+          <div class="form-actions">
+            <button class="primary-button" type="submit">Save settings</button>
+            <button class="secondary-button" id="reset-settings" type="button">
+              Restore defaults
+            </button>
+            <span id="settings-status" role="status" aria-live="polite"></span>
+          </div>
+        </form>
+      </section>
+      <p class="privacy-note">Settings are stored locally in Chrome.</p>
+    </main>
+    <script src="options.js"></script>
+  </body>
+</html>

@@ -25,3 +25,6 @@
   without Node.js. Sharing the optional browser-editor mode also requires
   `dist/editor`, `scripts/dev-server.mjs`, and Node.js on the recipient's
   computer.
+- GitHub Releases carry the generated sharing ZIP. The source branch ignores
+  `dist`; a matching `vMAJOR.MINOR.PATCH` tag runs checks, builds the extension,
+  stages the share package, and publishes it as a release asset.

@@ -6,6 +6,7 @@
   "scripts": {
     "build": "node scripts/build.mjs",
     "dev:editor": "node scripts/dev-server.mjs",
+    "release:stage": "node scripts/stage-release.mjs",
     "fixtures:large": "node tests/fixtures/generate-large.mjs",
     "test": "vitest run",
     "test:watch": "vitest",

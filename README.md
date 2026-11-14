@@ -97,6 +97,31 @@ The recipient needs Node.js 20 or newer. From the package root, they run `node s
 
 To share the source instead, send the project folder without `node_modules`; the recipient needs Node.js, must install dependencies with `npm ci`, and then build with `npm run build`. They can then load `dist\extension` in Chrome using the steps above.
 
+## Publish a GitHub release
+
+Pushing a version tag builds and tests the project, then publishes a ZIP asset
+containing `dist\extension`, `dist\editor`, `scripts\dev-server.mjs`, and a
+short installation guide. The ZIP is attached to a GitHub Release; generated
+files do not need to be committed to the source branch.
+
+1. Update `version` in `package.json` and `src\extension\manifest.json` to the
+   same `MAJOR.MINOR.PATCH` version.
+2. Commit and push the changes to `main`.
+3. Create and push a matching version tag. For example, for version `0.1.0`:
+
+   ```bat
+   git tag v0.1.0
+   git push origin v0.1.0
+   ```
+
+4. GitHub Actions runs the checks and creates the release with
+   `Page2Word-v0.1.0.zip`. If a check fails or the tag does not match the
+   package version, no release package is published.
+
+To inspect the package locally before tagging, run `npm run build` followed by
+`npm run release:stage`. The complete folder is written under
+`dist\release\Page2Word-v<version>`.
+
 The editor can also open pasted or saved HTML. Formatting settings apply to the current editor and future extractions. Edits autosave to extension-local IndexedDB.
 
 The Formatting settings page includes **Original site links**. The default,

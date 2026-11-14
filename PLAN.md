@@ -14,6 +14,8 @@
    navigable figure and table references in the editor and DOCX.
 5. **Build and share** — Build the extension into `dist/extension`; document
    sharing the built-in editor and the optional Node-served editor.
+6. **Publish releases** — Automate checks, build, package staging, and GitHub
+   Release ZIP publication for version tags.
 
 ## Next
 
@@ -23,7 +25,7 @@
    source-link behavior, internal figure/table navigation, DOCX opening, and
    optional writing-assistant mode with the Node server both running and
    stopped.
-3. **Package the release** — Share either `dist/extension` for built-in
-   editor use, or include `dist/editor` and `scripts/dev-server.mjs` as well
-   for optional browser-editor use. Follow Chrome's current extension
-   publishing requirements if preparing a Web Store release.
+3. **Publish the first release** — Validate the release workflow and publish
+   the current `0.1.0` package from a matching `v0.1.0` tag.
+4. **Consider Chrome Web Store distribution** — Follow Chrome's current
+   publishing requirements if automatic extension updates are desired.

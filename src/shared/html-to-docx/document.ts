@@ -97,6 +97,12 @@ export function createDocxDocument(
         );
       }
       children.push(tableFromBlock(block, settings, assets));
+      children.push(
+        new Paragraph({
+          children: [new TextRun({ text: " ", size: 2 })],
+          spacing: { before: 120, after: 0, line: 240 },
+        }),
+      );
     } else {
       children.push(paragraphFromBlock(block, settings, assets));
     }
@@ -198,7 +204,7 @@ export function createDocxDocument(
         ),
         heading2: headingStyle(
           settings.fontFamily,
-          Math.round(settings.subheadingFontSizePt * 2),
+          Math.round(settings.headingFontSizePt * 2),
           "202124",
         ),
         heading3: headingStyle(
@@ -249,7 +255,11 @@ export function createDocxDocument(
           },
           paragraph: {
             alignment: AlignmentType.LEFT,
-            spacing: { before: 0, after: 40, line: 360 },
+            spacing: {
+              before: 0,
+              after: 40,
+              line: Math.round(settings.tableLineSpacing * 240),
+            },
           },
         },
         {
@@ -258,7 +268,6 @@ export function createDocxDocument(
           run: {
             font: settings.fontFamily,
             size: Math.round(settings.fontSizePt * 2),
-            italics: true,
             color: "5F6368",
           },
           paragraph: {
@@ -271,7 +280,7 @@ export function createDocxDocument(
           name: "Figure Caption",
           run: {
             font: settings.fontFamily,
-            size: Math.round(settings.fontSizePt * 2),
+            size: 22,
           },
           paragraph: {
             alignment: AlignmentType.LEFT,
@@ -437,7 +446,8 @@ function tableFromBlock(
     size: 0,
     color: "FFFFFF",
   };
-  const rows = block.rows.map((row) => {
+  const rows = block.rows.map((row, rowIndex) => {
+    const isLastRow = rowIndex === block.rows.length - 1;
     const cells = row.cells.map((cell) => {
       const runs = cell.header
         ? cell.runs.map((run) => ({ ...run, bold: true }))
@@ -448,6 +458,14 @@ function tableFromBlock(
           new Paragraph({
             children: children.length ? children : [new TextRun("")],
             style: "TableText",
+            alignment:
+              cell.alignment === "center"
+                ? AlignmentType.CENTER
+                : cell.alignment === "right"
+                  ? AlignmentType.RIGHT
+                  : cell.alignment === "left"
+                    ? AlignmentType.LEFT
+                    : undefined,
           }),
         ],
         width: {
@@ -459,12 +477,20 @@ function tableFromBlock(
         ...(cell.columnSpan > 1 ? { columnSpan: cell.columnSpan } : {}),
         ...(cell.rowSpan > 1 ? { rowSpan: cell.rowSpan } : {}),
         borders: {
-          top: row.header ? border : noBorder,
-          bottom: row.header ? border : noBorder,
-          left: noBorder,
-          right: noBorder,
+          top: cell.border || row.header ? border : noBorder,
+          bottom: cell.border || row.header || isLastRow ? border : noBorder,
+          left: cell.border ? border : noBorder,
+          right: cell.border ? border : noBorder,
         },
-        margins: { top: 80, bottom: 80, left: 100, right: 100 },
+        margins:
+          cell.paddingPt !== undefined
+            ? {
+                top: Math.round(cell.paddingPt * 20),
+                bottom: Math.round(cell.paddingPt * 20),
+                left: Math.round(cell.paddingPt * 20),
+                right: Math.round(cell.paddingPt * 20),
+              }
+            : { top: 80, bottom: 80, left: 100, right: 100 },
       };
       return new TableCell(options);
     });
@@ -487,7 +513,7 @@ function tableFromBlock(
     layout: "autofit",
     borders: {
       top: noBorder,
-      bottom: noBorder,
+      bottom: border,
       left: noBorder,
       right: noBorder,
       insideHorizontal: noBorder,
@@ -530,8 +556,9 @@ function textRun(run: InlineRun, hyperlink = false): TextRun {
     strike: run.strike,
     subScript: run.subscript,
     superScript: run.superscript,
-    font: run.code ? "Courier New" : undefined,
-    color: hyperlink ? "0563C1" : undefined,
+    font: run.code ? "Courier New" : run.fontFamily,
+    size: run.fontSizePt ? Math.round(run.fontSizePt * 2) : undefined,
+    color: run.color ?? (hyperlink ? "0563C1" : undefined),
   });
 }
 

@@ -6,12 +6,25 @@ const openEditorButton =
 const statusElement = document.querySelector<HTMLElement>("#status");
 const serverStatusElement =
   document.querySelector<HTMLElement>("#server-status");
+const serverStatusTextElement = document.querySelector<HTMLElement>(
+  "#server-status-text",
+);
+const serverCheckButton =
+  document.querySelector<HTMLButtonElement>("#check-server");
+const serverHelpElement = document.querySelector<HTMLElement>("#server-help");
+const BROWSER_EDITOR_HEALTH_URL = "http://localhost:5173/health";
 
 button?.addEventListener("click", () => void extractArticle("built-in"));
 browserEditorButton?.addEventListener(
   "click",
   () => void extractArticle("browser"),
 );
+serverCheckButton?.addEventListener(
+  "click",
+  () => void checkBrowserEditorServer(),
+);
+
+void checkBrowserEditorServer();
 
 openEditorButton?.addEventListener("click", async () => {
   if (!statusElement || !openEditorButton) {
@@ -76,13 +89,59 @@ async function extractArticle(
       error.message.includes("Node editor server is not running")
     ) {
       if (serverStatusElement) {
-        serverStatusElement.textContent = error.message;
-        serverStatusElement.classList.add("is-error");
-        serverStatusElement.classList.remove("is-ready");
+        setBrowserEditorStatus("offline", error.message);
       }
     }
   } finally {
     activeButton.disabled = false;
+  }
+}
+
+async function checkBrowserEditorServer(): Promise<void> {
+  if (!serverStatusElement || !serverStatusTextElement || !serverCheckButton) {
+    return;
+  }
+
+  serverCheckButton.disabled = true;
+  setBrowserEditorStatus("checking", "Checking server…");
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), 1_500);
+
+  try {
+    const response = await fetch(BROWSER_EDITOR_HEALTH_URL, {
+      cache: "no-store",
+      signal: controller.signal,
+    });
+    const health: unknown = await response.json();
+    if (
+      !response.ok ||
+      typeof health !== "object" ||
+      health === null ||
+      !("service" in health) ||
+      health.service !== "page2word-editor"
+    ) {
+      throw new Error("Editor server health check failed.");
+    }
+    setBrowserEditorStatus("online", "Server is running");
+  } catch {
+    setBrowserEditorStatus("offline", "Server is not running");
+  } finally {
+    window.clearTimeout(timeout);
+    serverCheckButton.disabled = false;
+  }
+}
+
+function setBrowserEditorStatus(
+  state: "checking" | "online" | "offline",
+  message: string,
+): void {
+  if (!serverStatusElement || !serverStatusTextElement) {
+    return;
+  }
+  serverStatusElement.dataset.state = state;
+  serverStatusTextElement.textContent = message;
+  if (serverHelpElement) {
+    serverHelpElement.hidden = state !== "offline";
   }
 }
 

@@ -89,6 +89,83 @@ button.secondary:hover {
   background: #e0e8ff;
 }
 
+.server-panel {
+  background: #f7f8fb;
+  border-radius: 8px;
+  margin: 12px 0;
+  padding: 10px 12px;
+}
+
+.server-row {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+}
+
+.server-status {
+  align-items: center;
+  display: flex;
+  font-size: 13px;
+  gap: 8px;
+  margin: 0;
+}
+
+.server-status[data-state="checking"] {
+  color: #69758b;
+}
+
+.server-status[data-state="online"] {
+  color: #24734d;
+}
+
+.server-status[data-state="offline"] {
+  color: #b42318;
+}
+
+.server-dot {
+  background: #8993a5;
+  border-radius: 50%;
+  flex: 0 0 9px;
+  height: 9px;
+  width: 9px;
+}
+
+.server-status[data-state="online"] .server-dot {
+  background: #299465;
+  box-shadow: 0 0 0 3px #dff3e9;
+}
+
+.server-status[data-state="offline"] .server-dot {
+  background: #d04438;
+  box-shadow: 0 0 0 3px #fce8e6;
+}
+
+.server-check {
+  background: #eef2ff;
+  color: #2849a8;
+  font-size: 12px;
+  min-height: 32px;
+  padding: 5px 10px;
+  width: auto;
+}
+
+.server-check:hover {
+  background: #e0e8ff;
+}
+
+.server-help {
+  border-top: 1px solid #e8ebf1;
+  font-size: 12px;
+  line-height: 1.45;
+  margin: 9px 0 0;
+  padding-top: 8px;
+}
+
+.server-help[hidden] {
+  display: none;
+}
+
 .mode-note {
   font-size: 13px;
   margin: 8px 0 12px;

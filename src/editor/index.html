@@ -13,6 +13,9 @@
         <button type="button" id="open-settings">Formatting settings</button>
         <button type="button" id="open-html">Open .html</button>
         <button type="button" id="save-html" disabled>Save as .html</button>
+        <button type="button" id="restore-document" disabled>
+          Restore original document
+        </button>
         <button type="button" id="export-word" disabled>Export to Word</button>
         <span id="save-status" role="status" aria-live="polite"
           >Ready to open an article.</span
@@ -59,46 +62,191 @@
       <aside class="outline">
         <h2>Sections</h2>
         <ol id="outline-list"></ol>
+        <section
+          id="object-outline"
+          class="outline-objects"
+          aria-label="Figures and tables"
+          hidden
+        >
+          <h2>Figures and tables</h2>
+          <h3>Figures</h3>
+          <ol id="figure-outline"></ol>
+          <h3>Tables</h3>
+          <ol id="table-outline"></ol>
+        </section>
       </aside>
       <div class="document-column">
-        <div
-          id="format-toolbar"
-          class="format-toolbar"
-          hidden
-          role="toolbar"
-          aria-label="Text formatting"
-        >
-          <button
-            type="button"
-            data-command="bold"
-            aria-label="Bold"
-            title="Bold"
-          >
-            <strong>B</strong>
-          </button>
-          <button
-            type="button"
-            data-command="italic"
-            aria-label="Italic"
-            title="Italic"
-          >
-            <em>I</em>
-          </button>
-          <button
-            type="button"
-            data-command="underline"
-            aria-label="Underline"
-            title="Underline"
-          >
-            <u>U</u>
-          </button>
-        </div>
         <article
           id="editor-content"
           class="paper"
           aria-label="Editable article"
         ></article>
       </div>
+      <aside
+        id="properties-panel"
+        class="properties-panel"
+        aria-label="Selection properties"
+        hidden
+      >
+        <section
+          id="format-toolbar"
+          class="text-properties"
+          role="toolbar"
+          aria-label="Text formatting"
+          hidden
+        >
+          <h2>Text</h2>
+          <label>
+            Font
+            <input
+              type="text"
+              data-format="font-family"
+              aria-label="Font family"
+              list="editor-font-families"
+              value="Times New Roman"
+              disabled
+            />
+          </label>
+          <datalist id="editor-font-families">
+            <option value="Arial"></option>
+            <option value="Calibri"></option>
+            <option value="Georgia"></option>
+            <option value="Times New Roman"></option>
+          </datalist>
+          <label>
+            Size (pt)
+            <input
+              type="number"
+              data-format="font-size"
+              aria-label="Font size in points"
+              min="6"
+              max="72"
+              step="0.5"
+              disabled
+            />
+          </label>
+          <label>
+            Color
+            <input
+              type="color"
+              data-format="color"
+              aria-label="Font color"
+              value="#172033"
+              disabled
+            />
+          </label>
+          <div class="text-format-actions">
+            <button
+              type="button"
+              data-command="bold"
+              aria-label="Bold"
+              title="Bold"
+              disabled
+            >
+              <strong>B</strong>
+            </button>
+            <button
+              type="button"
+              data-command="italic"
+              aria-label="Italic"
+              title="Italic"
+              disabled
+            >
+              <em>I</em>
+            </button>
+            <button
+              type="button"
+              data-command="underline"
+              aria-label="Underline"
+              title="Underline"
+              disabled
+            >
+              <u>U</u>
+            </button>
+            <button
+              type="button"
+              id="undo-edit"
+              aria-label="Undo"
+              title="Undo"
+              disabled
+            >
+              Undo
+            </button>
+            <button
+              type="button"
+              id="redo-edit"
+              aria-label="Redo"
+              title="Redo"
+              disabled
+            >
+              Redo
+            </button>
+          </div>
+        </section>
+        <section id="table-properties" class="component-properties" hidden>
+          <h2>Table</h2>
+          <label>
+            Rows
+            <input id="table-row-count" type="text" disabled />
+          </label>
+          <label>
+            Columns
+            <input id="table-column-count" type="text" disabled />
+          </label>
+          <label>
+            Caption
+            <textarea id="table-caption-value" rows="2" disabled></textarea>
+          </label>
+          <label>
+            Font size (pt)
+            <input
+              id="table-font-size"
+              type="number"
+              min="6"
+              max="72"
+              step="0.5"
+              disabled
+            />
+          </label>
+          <label>
+            Cell alignment
+            <select id="table-cell-alignment" disabled>
+              <option value="left">Left</option>
+              <option value="center">Center</option>
+              <option value="right">Right</option>
+            </select>
+          </label>
+          <label>
+            Cell padding (px)
+            <input
+              id="table-cell-padding"
+              type="number"
+              min="0"
+              max="24"
+              step="1"
+              disabled
+            />
+          </label>
+          <label>
+            Borders
+            <select id="table-border-mode" disabled>
+              <option value="minimal">Header and bottom</option>
+              <option value="grid">All cell borders</option>
+            </select>
+          </label>
+        </section>
+        <section id="image-properties" class="component-properties" hidden>
+          <h2>Image</h2>
+          <label>
+            Description
+            <textarea id="image-alt-value" rows="2" disabled></textarea>
+          </label>
+          <label>
+            Dimensions
+            <input id="image-dimensions-value" type="text" disabled />
+          </label>
+        </section>
+      </aside>
     </main>
     <footer>
       Article content is stored locally in this browser and is not uploaded.

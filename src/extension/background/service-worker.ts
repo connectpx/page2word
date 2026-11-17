@@ -7,7 +7,9 @@ import {
 import {
   DEFAULT_DOCX_SETTINGS,
   DOCX_SETTINGS_KEY,
-  resolveDocxSettings,
+  DOCX_SETTINGS_VERSION,
+  DOCX_SETTINGS_VERSION_KEY,
+  resolveStoredDocxSettings,
 } from "../../shared/html-to-docx/settings";
 import { captureDocumentAssets } from "./assets";
 
@@ -82,10 +84,20 @@ async function extractAndOpen(
     editorMode === "browser" ? await requireBrowserEditor() : EDITOR_URL;
   const document = await extractFromTab(tabId);
   const capturedAssets = await captureDocumentAssets(document);
-  const savedSettings = await chrome.storage.local.get(DOCX_SETTINGS_KEY);
-  const settings = resolveDocxSettings(
+  const savedSettings = await chrome.storage.local.get([
+    DOCX_SETTINGS_KEY,
+    DOCX_SETTINGS_VERSION_KEY,
+  ]);
+  const settings = resolveStoredDocxSettings(
     savedSettings[DOCX_SETTINGS_KEY] ?? DEFAULT_DOCX_SETTINGS,
+    savedSettings[DOCX_SETTINGS_VERSION_KEY],
   );
+  if (savedSettings[DOCX_SETTINGS_VERSION_KEY] !== DOCX_SETTINGS_VERSION) {
+    await chrome.storage.local.set({
+      [DOCX_SETTINGS_KEY]: settings,
+      [DOCX_SETTINGS_VERSION_KEY]: DOCX_SETTINGS_VERSION,
+    });
+  }
   const sections = document.contentSections;
   const storedDocument = {
     id: document.id,
@@ -126,7 +138,7 @@ async function extractAndOpen(
 
 async function requireBrowserEditor(): Promise<string> {
   const unavailableMessage =
-    'The Node editor server is not running. From the project folder run "node scripts\\dev-server.mjs", then try again.';
+    'The Node editor server is not running. Double-click "StartServer.bat" in the Page2Word folder, then try again.';
   const response = await fetchEditorFile(
     `${BROWSER_EDITOR_URL}health`,
     unavailableMessage,

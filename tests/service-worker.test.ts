@@ -5,7 +5,11 @@ import {
   documentMetaKey,
   documentSectionKey,
 } from "../src/shared/storage-keys";
-import { DEFAULT_DOCX_SETTINGS } from "../src/shared/html-to-docx/settings";
+import {
+  DEFAULT_DOCX_SETTINGS,
+  DOCX_SETTINGS_KEY,
+  DOCX_SETTINGS_VERSION_KEY,
+} from "../src/shared/html-to-docx/settings";
 
 type MessageListener = (
   message: unknown,
@@ -81,9 +85,14 @@ describe("editor handoff service worker", () => {
               storedValues.set(key, value);
             }
           }),
-          get: vi.fn(async (key: string) => ({
-            ...(storedValues.has(key) ? { [key]: storedValues.get(key) } : {}),
-          })),
+          get: vi.fn(async (key: string | string[]) => {
+            const keys = Array.isArray(key) ? key : [key];
+            return Object.fromEntries(
+              keys
+                .filter((storedKey) => storedValues.has(storedKey))
+                .map((storedKey) => [storedKey, storedValues.get(storedKey)]),
+            );
+          }),
           remove: vi.fn(async (keys: string[]) => {
             for (const key of keys) {
               storedValues.delete(key);
@@ -113,6 +122,7 @@ describe("editor handoff service worker", () => {
       words: extractedDocument.stats.words,
       openedIn: "built-in",
     });
+
     expect(chromeMock.scripting.executeScript).toHaveBeenCalledTimes(2);
     expect(
       storedValues.get(documentSectionKey(extractedDocument.id, 0)),
@@ -127,6 +137,29 @@ describe("editor handoff service worker", () => {
       `chrome-extension://test-id/editor/index.html#doc=${extractedDocument.id}`,
     );
     expect(createdUrl).not.toContain(extractedDocument.html);
+  });
+
+  it("migrates a saved 13-point subheading default during extraction", async () => {
+    if (!listener) {
+      throw new Error(
+        "The service worker did not register its message listener.",
+      );
+    }
+    storedValues.set(DOCX_SETTINGS_KEY, { subheadingFontSizePt: 13 });
+    const response = vi.fn();
+
+    expect(listener({ type: "EXTRACT", tabId: 7 }, {}, response)).toBe(true);
+    await vi.waitFor(() => expect(response).toHaveBeenCalledOnce());
+
+    expect(storedValues.get(DOCX_SETTINGS_KEY)).toMatchObject({
+      subheadingFontSizePt: 12,
+    });
+    expect(storedValues.get(DOCX_SETTINGS_VERSION_KEY)).toBe(4);
+    expect(
+      storedValues.get(documentMetaKey(extractedDocument.id)),
+    ).toMatchObject({
+      settings: { subheadingFontSizePt: 12 },
+    });
   });
 
   it("opens the browser editor when the Node server is available", async () => {
@@ -231,7 +264,7 @@ describe("editor handoff service worker", () => {
     expect(response).toHaveBeenCalledWith({
       ok: false,
       error:
-        'The Node editor server is not running. From the project folder run "node scripts\\dev-server.mjs", then try again.',
+        'The Node editor server is not running. Double-click "StartServer.bat" in the Page2Word folder, then try again.',
     });
     expect(chromeMock.scripting.executeScript).not.toHaveBeenCalled();
   });
@@ -260,7 +293,7 @@ describe("editor handoff service worker", () => {
     expect(response).toHaveBeenCalledWith({
       ok: false,
       error:
-        'The Node editor server is not running. From the project folder run "node scripts\\dev-server.mjs", then try again.',
+        'The Node editor server is not running. Double-click "StartServer.bat" in the Page2Word folder, then try again.',
     });
     expect(chromeMock.scripting.executeScript).not.toHaveBeenCalled();
     expect(chromeMock.tabs.create).not.toHaveBeenCalled();

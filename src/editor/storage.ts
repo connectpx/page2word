@@ -14,6 +14,7 @@ export interface EditorSectionRecord {
   title: string;
   words: number;
   html: string;
+  originalHtml?: string;
   done: boolean;
   hidden?: boolean;
 }
@@ -159,6 +160,17 @@ export async function saveEditorSections(
     transaction.abort();
     throw new Error("The edited document is missing from local storage.");
   }
+  const updatedSections = new Map(
+    sections.map((section) => [section.id, section]),
+  );
+  document.sections = document.sections.map((section) => {
+    const updated = updatedSections.get(section.id);
+    return updated ? { ...section, words: updated.words } : section;
+  });
+  document.stats.words = document.sections.reduce(
+    (total, section) => total + section.words,
+    0,
+  );
   document.updatedAt = new Date().toISOString();
   documentStore.put(document);
   const sectionStore = transaction.objectStore("sections");

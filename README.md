@@ -57,35 +57,49 @@ The main source folders are `src\extension` (popup, settings, extraction and ext
 The built-in editor runs as a Chrome extension page and requires no separate server. Chrome does not allow other extensions to inject into extension pages, so use the browser editor mode for Grammarly, QuillBot, or other writing assistants. This mode serves the already-built editor files using Node.js:
 
 1. Build the project so `dist\editor` contains the current editor files.
-2. From the project folder run:
+2. Double-click **StartServer.bat** in the project folder. It opens a separate server window and looks for Node.js on PATH, in common Windows install locations, or in the project's portable Node folder.
+3. Keep the server window open and choose **Extract with Writing Assistants** in the extension popup. The editor opens at `http://localhost:5173`, a normal webpage where other extensions can run.
 
-   ```bat
-   node scripts\dev-server.mjs
-   ```
+If Node.js cannot be found, the launcher opens a window with instructions and a download link. The popup opens without contacting the server. It checks the server only after **Extract with Writing Assistants** is selected; if unavailable, it shows the start instructions without blocking the built-in editor.
 
-3. Keep the terminal open and choose **Extract with Writing Assistants** in the extension popup. It opens `http://localhost:5173`, a normal webpage where other extensions can run.
+The editor can export an editable article as a real `.docx`. Its defaults use Times New Roman, 1.5 line spacing, a centered 16-point bold title, 14-point headings, 12-point subheadings, 12-point justified body text, 11-point figure captions, and 10-point single-spaced table text (matching pixel sizes in the editor). The extension’s Formatting settings page groups options by body, headings, tables, and other settings. Its section-title keyword list accepts one phrase per line and hides matching sections from the editor and exports. You can also choose whether original website links are removed (the default) or kept. Articles with headings are split into editor sections at each main heading; following subheadings stay in that section. Section word counts update as you edit or paste and are saved with the document. Pasted text is inserted without outside formatting so it uses the editor’s formatting; Word HTML files respect their declared encoding and receive the same heading and table normalization. Em dashes and typographic quotes are normalized to plain punctuation while valid characters such as the en dash in “K–12” are preserved. Figure and table references link to their targets in the editor and DOCX. Table caption labels are bold but not linked; a small gap separates each table from following text. Table backgrounds are unfilled and table text is left-aligned; the first row is formatted as a header when the source has no header markup, and tables have a bottom border. Figure captions and their references use the consistent “Figure” label and have a bottom separator. Selecting text in a section opens a floating toolbar for bold, italic, or underline. Article images can be downloaded or replaced, and sections can be hidden from the editor and exports. The export preserves nested lists, block quotes, and code blocks; captured article images are embedded and tables retain merged cells. Images that cannot be fetched are labeled in the article and reported in the export summary. Export preparation is cancellable and DOCX generation runs in a worker.
 
-The popup opens without contacting the server. It checks the server only after **Extract with Writing Assistants** is selected; if unavailable, it shows the start instructions without blocking the built-in editor.
-
-The editor can export an editable article as a real `.docx`. Its defaults use Times New Roman, 1.5 line spacing, a centered 16-point bold title, 14-point headings, 13-point subheadings, 12-point justified body text, left-aligned captions, and 10-point table text (matching pixel sizes in the editor). The extension’s Formatting settings page lets you change and save these defaults locally, including whether original website links are removed (the default) or kept. Figure and table references link to their targets in the editor and DOCX. Table backgrounds are unfilled and table text is left-aligned; table borders are omitted except for the top and bottom of the header row. Figure captions retain their original label (for example, “Fig.”) and have a bottom separator. Selecting text in a section opens a floating toolbar for bold, italic, or underline. Article images can be downloaded or replaced, and sections can be hidden from the editor and exports. The export preserves nested lists, block quotes, and code blocks; captured article images are embedded and tables retain merged cells. Images that cannot be fetched are labeled in the article and reported in the export summary. Export preparation is cancellable and DOCX generation runs in a worker.
+When opening a saved HTML file, Page2Word respects its declared character encoding (including Windows-1252 Word exports), groups content into sections by main headings, and keeps numbered table-caption labels linked to their tables.
 
 ## Share the extension
 
-For the built-in editor, ZIP and send the complete `dist\extension` folder. The recipient does not need the source code, Node.js, npm, a localhost server, or a rebuild.
+### Install the prebuilt extension
 
 On the recipient's computer:
 
-1. Extract the ZIP to a permanent folder.
+1. Download the [latest Page2Word release](https://github.com/connectpx/page2word/releases/latest) and extract the ZIP to a folder where it can stay.
 2. In Chrome, open `chrome://extensions` and enable **Developer mode**.
-3. Choose **Load unpacked** and select the extracted `extension` folder (the folder containing `manifest.json`).
-4. Open an article and select **Extract & Open Editor** from the Page2Word popup. The editor opens in a Chrome extension tab.
+3. Choose **Load unpacked** and select the `dist\extension` folder inside the extracted Page2Word folder (the folder containing `manifest.json`).
+4. Open an article, click the Page2Word extension icon, then choose **Extract & Open Editor**.
 
-Documents and settings are stored in that person's browser profile and are not shared back with the sender.
+The built-in editor needs no Node.js, npm, server, or rebuild. Documents and settings are stored in the recipient's own Chrome profile.
 
-To let the recipient use other writing-assistant extensions, include `dist\editor` and `scripts\dev-server.mjs` in the ZIP, preserving this layout:
+### Use other writing-assistant extensions (optional)
+
+This extra setup is only needed if the recipient wants writing-assistant extensions to work inside the editor. It requires Node.js, a free program that runs the local editor server. It is not needed for normal Page2Word use.
+
+1. Download Node.js 20 or newer from the [official Node.js download page](https://nodejs.org/en/download).
+2. Choose the **LTS** version and download the **Windows Installer (.msi)**. For most Windows computers, choose the **64-bit** installer.
+3. Open the downloaded installer and accept the default options. Node.js only needs to be installed once.
+4. If the Page2Word folder was open during installation, close and reopen it.
+5. In the extracted Page2Word folder, double-click **StartServer.bat**. A separate black window will open and show the server address (`http://localhost:5173`). Keep this window open while using the writing-assistant feature.
+6. Open an article, click the Page2Word extension icon, and choose **Extract with Writing Assistants**.
+
+The popup shows a green or red server status and a **Check** button. Chrome does not allow the extension to run the `.bat` file, so start it by double-clicking **StartServer.bat**. If Windows says it cannot find Node.js, make sure Node.js installation finished, then try again. If a writing-assistant extension asks which sites it can work on, allow it on `http://localhost:5173`. Close the server window when finished; this stops the local server.
+
+The release ZIP already includes the editor files and server launcher. No npm install or rebuilding is needed.
+
+The release package contains:
 
 ```text
 Page2Word/
+  StartServer.bat
+  README.txt
   dist/
     extension/
     editor/
@@ -93,16 +107,15 @@ Page2Word/
     dev-server.mjs
 ```
 
-The recipient needs Node.js 20 or newer. From the package root, they run `node scripts\dev-server.mjs`; npm install and rebuilding are not required for this prebuilt package. Keep the terminal open and choose **Extract with Writing Assistants**. If their writing-assistant extension has a site-access setting, allow it on `http://localhost:5173`.
-
 To share the source instead, send the project folder without `node_modules`; the recipient needs Node.js, must install dependencies with `npm ci`, and then build with `npm run build`. They can then load `dist\extension` in Chrome using the steps above.
 
 ## Publish a GitHub release
 
 Pushing a version tag builds and tests the project, then publishes a ZIP asset
-containing `dist\extension`, `dist\editor`, `scripts\dev-server.mjs`, and a
-short installation guide. The ZIP is attached to a GitHub Release; generated
-files do not need to be committed to the source branch.
+containing `dist\extension`, `dist\editor`, `scripts\dev-server.mjs`, the
+Windows server launcher, and a short installation guide. The ZIP is attached
+to a GitHub Release; generated files do not need to be committed to the source
+branch.
 
 1. Update `version` in `package.json` and `src\extension\manifest.json` to the
    same `MAJOR.MINOR.PATCH` version.
@@ -123,6 +136,17 @@ To inspect the package locally before tagging, run `npm run build` followed by
 `dist\release\Page2Word-v<version>`.
 
 The editor can also open pasted or saved HTML. Formatting settings apply to the current editor and future extractions. Edits autosave to extension-local IndexedDB.
+
+The editor supports Ctrl+Z/Ctrl+Y (or the Undo/Redo toolbar buttons), restoring
+the original content of one section from the outline, or restoring the whole
+document. Click or select text to show the formatting inspector; font family
+and size are displayed read-only, while color, bold, italic, and
+underline apply to selected text and are preserved when exporting to Word.
+
+The editor uses floating left and right side panels. Selecting a table opens
+its row/column and caption details, with controls for cell font size,
+alignment, padding, and borders. Image download and replacement are grouped
+under the image actions menu.
 
 The Formatting settings page includes **Original site links**. The default,
 **Remove**, removes source-site hyperlinks while preserving their text;

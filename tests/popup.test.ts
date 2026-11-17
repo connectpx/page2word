@@ -22,7 +22,12 @@ describe("popup writing-assistant mode", () => {
     dom = new JSDOM(popupHtml, {
       url: "chrome-extension://test-id/popup/popup.html",
     });
-    fetchMock = vi.fn();
+    fetchMock = vi.fn(
+      async () =>
+        new Response(JSON.stringify({ service: "page2word-editor" }), {
+          status: 200,
+        }),
+    );
     sendMessage = vi.fn(async () => ({
       ok: true,
       title: "Test article",
@@ -48,14 +53,60 @@ describe("popup writing-assistant mode", () => {
     dom.window.close();
   });
 
-  it("opens without waiting for a server status request", async () => {
+  it("shows server status without waiting for the status request", async () => {
+    let resolveFetch: ((response: Response) => void) | undefined;
+    fetchMock.mockImplementation(
+      () =>
+        new Promise<Response>((resolve) => {
+          resolveFetch = resolve;
+        }),
+    );
     await import("../src/extension/popup/popup");
 
-    expect(fetchMock).not.toHaveBeenCalled();
+    expect(fetchMock).toHaveBeenCalledWith(
+      "http://localhost:5173/health",
+      expect.objectContaining({ cache: "no-store" }),
+    );
     expect(
       dom.window.document.querySelector<HTMLButtonElement>("#extract-browser")
         ?.disabled,
     ).toBe(false);
+    resolveFetch?.(
+      new Response(JSON.stringify({ service: "page2word-editor" }), {
+        status: 200,
+      }),
+    );
+    await vi.waitFor(() => {
+      expect(
+        dom.window.document.querySelector<HTMLElement>("#server-status")
+          ?.dataset.state,
+      ).toBe("online");
+    });
+  });
+
+  it("shows an offline indicator and can recheck when the server starts", async () => {
+    fetchMock.mockRejectedValueOnce(new Error("Connection refused"));
+    await import("../src/extension/popup/popup");
+
+    await vi.waitFor(() => {
+      expect(
+        dom.window.document.querySelector<HTMLElement>("#server-status")
+          ?.dataset.state,
+      ).toBe("offline");
+    });
+    expect(
+      dom.window.document.querySelector<HTMLElement>("#server-help")?.hidden,
+    ).toBe(false);
+
+    dom.window.document
+      .querySelector<HTMLButtonElement>("#check-server")
+      ?.click();
+    await vi.waitFor(() => {
+      expect(
+        dom.window.document.querySelector<HTMLElement>("#server-status")
+          ?.dataset.state,
+      ).toBe("online");
+    });
   });
 
   it("requests browser editing only when the user chooses the mode", async () => {
@@ -77,7 +128,7 @@ describe("popup writing-assistant mode", () => {
     sendMessage.mockResolvedValue({
       ok: false,
       error:
-        'The Node editor server is not running. From the project folder run "node scripts\\dev-server.mjs", then try again.',
+        'The Node editor server is not running. Double-click "StartServer.bat" in the Page2Word folder, then try again.',
     });
     await import("../src/extension/popup/popup");
     dom.window.document
@@ -90,7 +141,7 @@ describe("popup writing-assistant mode", () => {
           ?.textContent,
       ).toContain("Node editor server is not running");
     });
-    expect(fetchMock).not.toHaveBeenCalled();
+    expect(fetchMock).toHaveBeenCalled();
     expect(
       dom.window.document.querySelector<HTMLButtonElement>("#extract-browser")
         ?.disabled,

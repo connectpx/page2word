@@ -21,10 +21,31 @@
   worker.
 - Formatting defaults and the original-site-links preference are stored in
   Chrome local storage and apply to the editor and exports.
+- Extracted articles are split into editable sections at main H2 headings;
+  following subheadings remain grouped with their parent heading. Unicode
+  article text is preserved through extraction and editor serialization.
+  Imported HTML uses its declared charset and the same heading-level
+  normalization and section grouping.
+- Section word counts are recalculated on edits and plain-text pastes, displayed
+  in the outline, and persisted in local document metadata. Pasted/imported
+  text is normalized for invalid control/replacement characters and common
+  typographic punctuation; valid Unicode such as en dashes is preserved, and
+  em dashes are converted to hyphens.
+- Figure captions default to 11 px. Table captions bold and internally link
+  their numbered label; tables without explicit header markup use their first
+  row as the formatted header and retain a bottom border in editor and DOCX.
 - The built-in extension folder can be shared as an unpacked Chrome extension
   without Node.js. Sharing the optional browser-editor mode also requires
   `dist/editor`, `scripts/dev-server.mjs`, and Node.js on the recipient's
-  computer.
+  computer. The Windows share package includes `StartServer.bat`,
+  which opens a persistent server window and locates Node.js from PATH,
+  standard Windows install locations, or the project's portable Node folder.
+- The release ZIP includes `README.txt` with non-technical Windows setup steps
+  and the official Node.js download link. Node.js is optional for the built-in
+  editor and required only for writing-assistant extensions.
+- The popup checks the optional local editor server asynchronously and shows
+  its running state. It cannot launch the recipient's `.bat` file; the popup
+  provides the filename and instructions when the server is stopped.
 - GitHub Releases carry the generated sharing ZIP. The source branch ignores
   `dist`; a matching `vMAJOR.MINOR.PATCH` tag runs checks, builds the extension,
   stages the share package, and publishes it as a release asset.

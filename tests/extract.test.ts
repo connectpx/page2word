@@ -79,6 +79,45 @@ describe("article extraction", () => {
     dom.window.close();
   });
 
+  it("creates heading-based sections and keeps nested subheadings together", () => {
+    const body = "Teaching practice supports professional development. ".repeat(
+      12,
+    );
+    const dom = new JSDOM(
+      `<title>Teaching skills</title><article>` +
+        `<section><h2>3. Teaching skills and professional standards</h2>` +
+        `<p>${body}</p><h3>3.1. Research techniques through capstone</h3>` +
+        `<p>${body}</p></section>` +
+        `<section><h2>4. Assessment</h2><p>${body}</p></section>` +
+        `</article>`,
+      { url: "https://example.test/teaching" },
+    );
+    const result = extractArticle(dom.window.document);
+
+    expect(result.contentSections).toHaveLength(2);
+    expect(result.contentSections[0].title).toBe(
+      "3. Teaching skills and professional standards",
+    );
+    expect(result.contentSections[0].html).toContain(
+      "<h3>3.1. Research techniques through capstone</h3>",
+    );
+    expect(result.contentSections[1].title).toBe("4. Assessment");
+    dom.window.close();
+  });
+
+  it("preserves en dashes in extracted article text", () => {
+    const dom = new JSDOM(
+      "<title>Education</title><main><h2>Education</h2>" +
+        "<p>K\u201312 learning serves students across grade levels.</p></main>",
+      { url: "https://example.test/education" },
+    );
+    const result = extractArticle(dom.window.document);
+
+    expect(result.html).toContain("K\u201312");
+    expect(result.html).not.toContain("\uFFFD");
+    dom.window.close();
+  });
+
   it("extracts a generated 10,000-word article without losing sections or tables", () => {
     const dom = new JSDOM(createLargeFixture(10_000), {
       url: "https://example.test/large",

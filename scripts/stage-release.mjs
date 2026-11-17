@@ -53,6 +53,7 @@ await Promise.all([
     resolve(root, "scripts", "dev-server.mjs"),
     resolve(releaseRoot, "scripts", "dev-server.mjs"),
   ),
+  cp(resolve(root, "StartServer.bat"), resolve(releaseRoot, "StartServer.bat")),
 ]);
 await writeFile(
   resolve(releaseRoot, "README.txt"),
@@ -64,10 +65,13 @@ Install the extension:
 
 The built-in editor works without Node.js.
 
+The popup shows whether the optional editor server is running. Use its Check button to refresh the status. Chrome does not allow the extension to start local .bat files.
+
 To use writing-assistant extensions:
-1. Install Node.js 20 or newer.
-2. From this folder, run: node scripts\\dev-server.mjs
-3. Keep the terminal open and choose Extract with Writing Assistants.
+1. Download Node.js 20 or newer from https://nodejs.org/en/download.
+2. Choose the LTS Windows Installer (.msi) and install it using the default options.
+3. Double-click StartServer.bat in this folder. A separate window opens.
+4. Keep the server window open and choose Extract with Writing Assistants.
 
 The editor server serves the included dist\\editor files at http://localhost:5173.
 No npm install or rebuild is required.

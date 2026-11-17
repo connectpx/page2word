@@ -1,5 +1,10 @@
 import { Readability } from "@mozilla/readability";
 import type { ExtractedDoc } from "../../shared/types";
+import {
+  normalizeHeadingLevels,
+  normalizeTextNodes,
+  sectionizeArticleHtml,
+} from "../../shared/html-document";
 import { sanitizeHtml } from "../../shared/sanitize";
 
 interface Article {
@@ -142,25 +147,8 @@ function normalizeContent(
     }
   }
 
-  const headings = [...parsed.body.querySelectorAll("h1,h2,h3,h4,h5,h6")];
-  if (headings.length) {
-    const firstLevel = Math.min(
-      ...headings.map((heading) => Number(heading.tagName.slice(1))),
-    );
-    let previousLevel = 1;
-    for (const heading of headings) {
-      const sourceLevel = Number(heading.tagName.slice(1));
-      const level = Math.min(
-        6,
-        sourceLevel - firstLevel + 2,
-        previousLevel + 1,
-      );
-      const replacement = parsed.createElement(`h${level}`);
-      replacement.replaceChildren(...heading.childNodes);
-      heading.replaceWith(replacement);
-      previousLevel = level;
-    }
-  }
+  normalizeTextNodes(parsed.body);
+  normalizeHeadingLevels(parsed.body, parsed);
 
   return sanitizeHtml(parsed.body.innerHTML, documentRef);
 }
@@ -248,62 +236,6 @@ function fallbackArticle(source: Document): Article | null {
   };
 }
 
-function sectionize(
-  html: string,
-  documentRef: Document,
-  title: string,
-): ExtractedDoc["contentSections"] {
-  const parsed = documentRef.implementation.createHTMLDocument("");
-  parsed.body.innerHTML = html;
-  const blocks = [...parsed.body.children];
-  if (wordCount(parsed.body.textContent ?? "") < 3_000) {
-    return [
-      {
-        id: "section-1",
-        title: title || "Article",
-        words: wordCount(parsed.body.textContent ?? ""),
-        html,
-      },
-    ];
-  }
-
-  const sections: ExtractedDoc["contentSections"] = [];
-  let currentTitle = title || "Article";
-  let currentBlocks: Element[] = [];
-  let currentWords = 0;
-  const finishSection = () => {
-    if (!currentBlocks.length) {
-      return;
-    }
-    const sectionHtml = currentBlocks.map((block) => block.outerHTML).join("");
-    sections.push({
-      id: `section-${sections.length + 1}`,
-      title: currentTitle || `Section ${sections.length + 1}`,
-      words: currentWords,
-      html: sectionHtml,
-    });
-    currentBlocks = [];
-    currentWords = 0;
-  };
-
-  for (const block of blocks) {
-    const blockWords = wordCount(block.textContent ?? "");
-    const isHeadingBoundary = /^H[12]$/.test(block.tagName);
-    if (isHeadingBoundary && currentBlocks.length) {
-      finishSection();
-    } else if (currentWords + blockWords > 2_500 && currentBlocks.length) {
-      finishSection();
-    }
-    if (isHeadingBoundary) {
-      currentTitle = block.textContent?.trim() || currentTitle;
-    }
-    currentBlocks.push(block);
-    currentWords += blockWords;
-  }
-  finishSection();
-  return sections;
-}
-
 export function extractArticle(source: Document): ExtractedDoc {
   const warnings: string[] = [];
   const clone = source.cloneNode(true) as Document;
@@ -351,7 +283,7 @@ export function extractArticle(source: Document): ExtractedDoc {
   const parsedContent = source.implementation.createHTMLDocument("");
   parsedContent.body.innerHTML = html;
   const text = parsedContent.body.textContent ?? "";
-  const contentSections = sectionize(html, source, title);
+  const contentSections = sectionizeArticleHtml(html, source, title);
 
   return {
     id: createId(),

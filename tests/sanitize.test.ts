@@ -45,4 +45,20 @@ describe("HTML sanitization", () => {
     expect(clean).toContain('height="50"');
     dom.window.close();
   });
+
+  it("preserves supported text styles and removes unsafe style declarations", () => {
+    const dom = new JSDOM("");
+    const clean = sanitizeHtml(
+      '<p><span style="font-family: Arial; font-size: 18pt; font-weight: 700; color: #123456; background-image: url(javascript:bad())">Styled</span></p>',
+      dom.window.document,
+    );
+
+    expect(clean).toContain("font-family: Arial");
+    expect(clean).toContain("font-size: 18pt");
+    expect(clean).toContain("font-weight: 700");
+    expect(clean).toContain("color: rgb(18, 52, 86)");
+    expect(clean).not.toContain("background-image");
+    expect(clean).not.toContain("javascript:");
+    dom.window.close();
+  });
 });

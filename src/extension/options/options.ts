@@ -1,7 +1,10 @@
 import {
   DEFAULT_DOCX_SETTINGS,
   DOCX_SETTINGS_KEY,
+  DOCX_SETTINGS_VERSION,
+  DOCX_SETTINGS_VERSION_KEY,
   resolveDocxSettings,
+  resolveStoredDocxSettings,
 } from "../../shared/html-to-docx/settings";
 
 const form = requiredField<HTMLFormElement>("#settings-form");
@@ -17,7 +20,11 @@ const fields = {
     "#subheading-font-size-pt",
   ),
   tableFontSizePt: requiredField<HTMLInputElement>("#table-font-size-pt"),
+  tableLineSpacing: requiredField<HTMLInputElement>("#table-line-spacing"),
   lineSpacing: requiredField<HTMLInputElement>("#line-spacing"),
+  excludedSectionKeywords: requiredField<HTMLTextAreaElement>(
+    "#excluded-section-keywords",
+  ),
   alignment: requiredField<HTMLSelectElement>("#alignment"),
   originalLinks: requiredField<HTMLSelectElement>("#original-links"),
 };
@@ -35,15 +42,31 @@ resetButton.addEventListener("click", () => {
 void loadSettings().catch(showSettingsError);
 
 async function loadSettings(): Promise<void> {
-  const stored = await chrome.storage.local.get(DOCX_SETTINGS_KEY);
-  fillForm(resolveDocxSettings(stored[DOCX_SETTINGS_KEY]));
+  const stored = await chrome.storage.local.get([
+    DOCX_SETTINGS_KEY,
+    DOCX_SETTINGS_VERSION_KEY,
+  ]);
+  const settings = resolveStoredDocxSettings(
+    stored[DOCX_SETTINGS_KEY],
+    stored[DOCX_SETTINGS_VERSION_KEY],
+  );
+  fillForm(settings);
+  if (stored[DOCX_SETTINGS_VERSION_KEY] !== DOCX_SETTINGS_VERSION) {
+    await chrome.storage.local.set({
+      [DOCX_SETTINGS_KEY]: settings,
+      [DOCX_SETTINGS_VERSION_KEY]: DOCX_SETTINGS_VERSION,
+    });
+  }
 }
 
 async function saveSettings(
   settings: ReturnType<typeof resolveDocxSettings>,
 ): Promise<void> {
   statusElement.textContent = "Saving…";
-  await chrome.storage.local.set({ [DOCX_SETTINGS_KEY]: settings });
+  await chrome.storage.local.set({
+    [DOCX_SETTINGS_KEY]: settings,
+    [DOCX_SETTINGS_VERSION_KEY]: DOCX_SETTINGS_VERSION,
+  });
   statusElement.textContent =
     "Settings saved. They apply to the current editor and future extractions.";
 }
@@ -57,9 +80,14 @@ function readFormSettings(): ReturnType<typeof resolveDocxSettings> {
     headingFontSizePt: Number(fields.headingFontSizePt.value),
     subheadingFontSizePt: Number(fields.subheadingFontSizePt.value),
     tableFontSizePt: Number(fields.tableFontSizePt.value),
+    tableLineSpacing: Number(fields.tableLineSpacing.value),
     lineSpacing: Number(fields.lineSpacing.value),
     alignment: fields.alignment.value,
     keepOriginalLinks: fields.originalLinks.value === "keep",
+    excludedSectionKeywords: fields.excludedSectionKeywords.value
+      .split(/\r?\n/)
+      .map((keyword) => keyword.trim())
+      .filter(Boolean),
   });
 }
 
@@ -70,9 +98,12 @@ function fillForm(settings: ReturnType<typeof resolveDocxSettings>): void {
   fields.headingFontSizePt.value = String(settings.headingFontSizePt);
   fields.subheadingFontSizePt.value = String(settings.subheadingFontSizePt);
   fields.tableFontSizePt.value = String(settings.tableFontSizePt);
+  fields.tableLineSpacing.value = String(settings.tableLineSpacing);
   fields.lineSpacing.value = String(settings.lineSpacing);
   fields.alignment.value = settings.alignment;
   fields.originalLinks.value = settings.keepOriginalLinks ? "keep" : "remove";
+  fields.excludedSectionKeywords.value =
+    settings.excludedSectionKeywords.join("\n");
 }
 
 function requiredField<T extends HTMLElement>(selector: string): T {

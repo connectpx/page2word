@@ -1,14 +1,17 @@
 import type { DocxSettings } from "./types";
 
 export const DOCX_SETTINGS_KEY = "docxSettings";
+export const DOCX_SETTINGS_VERSION_KEY = "docxSettingsVersion";
+export const DOCX_SETTINGS_VERSION = 4;
 
 export const DEFAULT_DOCX_SETTINGS: DocxSettings = {
   fontFamily: "Times New Roman",
   fontSizePt: 12,
   titleFontSizePt: 16,
   headingFontSizePt: 14,
-  subheadingFontSizePt: 13,
+  subheadingFontSizePt: 12,
   tableFontSizePt: 10,
+  tableLineSpacing: 1,
   lineSpacing: 1.5,
   spaceAfterPt: 8,
   alignment: "justify",
@@ -22,6 +25,7 @@ export const DEFAULT_DOCX_SETTINGS: DocxSettings = {
   pageNumbers: false,
   pageBreakBeforeH1: false,
   keepHeadingsWithNext: true,
+  excludedSectionKeywords: [],
 };
 
 export function resolveDocxSettings(value: unknown): DocxSettings {
@@ -68,6 +72,12 @@ export function resolveDocxSettings(value: unknown): DocxSettings {
       6,
       72,
     ),
+    tableLineSpacing: boundedNumber(
+      candidate.tableLineSpacing,
+      DEFAULT_DOCX_SETTINGS.tableLineSpacing,
+      0.8,
+      3,
+    ),
     lineSpacing: boundedNumber(
       candidate.lineSpacing,
       DEFAULT_DOCX_SETTINGS.lineSpacing,
@@ -99,11 +109,59 @@ export function resolveDocxSettings(value: unknown): DocxSettings {
     pageNumbers: booleanValue(candidate.pageNumbers, true),
     pageBreakBeforeH1: booleanValue(candidate.pageBreakBeforeH1, false),
     keepHeadingsWithNext: booleanValue(candidate.keepHeadingsWithNext, true),
+    excludedSectionKeywords: stringList(candidate.excludedSectionKeywords),
   };
+}
+
+export function resolveStoredDocxSettings(
+  value: unknown,
+  version: unknown,
+): DocxSettings {
+  const settings = resolveDocxSettings(value);
+  if (
+    version !== DOCX_SETTINGS_VERSION &&
+    isRecord(value) &&
+    settings.subheadingFontSizePt === 13
+  ) {
+    return { ...settings, subheadingFontSizePt: 12 };
+  }
+  return settings;
+}
+
+export function shouldExcludeSectionTitle(
+  title: string,
+  keywords: readonly string[],
+): boolean {
+  const normalizedTitle = title.toLowerCase();
+  return keywords.some((keyword) => {
+    const normalizedKeyword = keyword.trim().toLowerCase();
+    return (
+      normalizedKeyword !== "" && normalizedTitle.includes(normalizedKeyword)
+    );
+  });
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function stringList(value: unknown): string[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  const seen = new Set<string>();
+  return value.flatMap((item) => {
+    if (typeof item !== "string") {
+      return [];
+    }
+    const keyword = item.trim();
+    const normalized = keyword.toLowerCase();
+    if (!keyword || seen.has(normalized)) {
+      return [];
+    }
+    seen.add(normalized);
+    return [keyword];
+  });
 }
 
 function boundedText(

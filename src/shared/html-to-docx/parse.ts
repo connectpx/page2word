@@ -136,7 +136,9 @@ export async function parseHtmlToDocxBlocks(
         const paragraphStyle =
           element.querySelector("img") && !element.textContent?.trim()
             ? "image"
-            : style;
+            : isTableCaptionParagraph(element)
+              ? "caption"
+              : style;
         addParagraph(
           runs,
           paragraphStyle,
@@ -195,12 +197,10 @@ export async function parseHtmlToDocxBlocks(
       return;
     }
     if (tag === "TABLE") {
-      const caption = element
-        .querySelector(":scope > caption")
-        ?.textContent?.trim();
+      const captionElement = element.querySelector(":scope > caption");
       const table = await parseTable(element, yieldIfNeeded);
-      if (caption) {
-        addParagraph([{ text: caption }], "caption");
+      if (captionElement?.textContent?.trim()) {
+        addParagraph(trimRuns(inlineRuns(captionElement)), "caption");
       }
       if (table.rows.length && table.columnCount) {
         table.bookmark = validBookmark(element.id);
@@ -315,6 +315,33 @@ function inlineRuns(
   if (tag === "SUB") next.subscript = true;
   if (tag === "SUP") next.superscript = true;
   if (tag === "CODE") next.code = true;
+  const style = (element as HTMLElement).style;
+  if (style.fontFamily) {
+    next.fontFamily = style.fontFamily.replace(/^['"]|['"]$/g, "");
+  }
+  if (style.fontSize) {
+    const fontSize = style.fontSize.match(/^(\d+(?:\.\d+)?)(px|pt)$/i);
+    if (fontSize) {
+      const value = Number(fontSize[1]);
+      next.fontSizePt =
+        fontSize[2].toLowerCase() === "px" ? value * 0.75 : value;
+    }
+  }
+  if (style.fontWeight) {
+    next.bold = style.fontWeight === "bold" || Number(style.fontWeight) >= 600;
+  }
+  if (style.color) {
+    const color = style.color.match(/^rgba?\((\d+),\s*(\d+),\s*(\d+)/i);
+    if (color) {
+      next.color = color
+        .slice(1, 4)
+        .map((channel) => Number(channel).toString(16).padStart(2, "0"))
+        .join("")
+        .toUpperCase();
+    } else {
+      next.color = style.color.replace(/^#/, "").toUpperCase();
+    }
+  }
   if (tag === "A") {
     const href = element.getAttribute("href");
     if (href && /^(?:https?:|mailto:|tel:)/i.test(href)) {
@@ -325,6 +352,20 @@ function inlineRuns(
   }
 
   return [...element.childNodes].flatMap((child) => inlineRuns(child, next));
+}
+
+function isTableCaptionParagraph(element: Element): boolean {
+  if (!/^Table\s+\d+\b/i.test(element.textContent?.trim() ?? "")) {
+    return false;
+  }
+  let next = element.nextElementSibling;
+  while (next && next.tagName !== "TABLE") {
+    if (next.tagName === "P" || next.matches("h1,h2,h3,h4,h5,h6")) {
+      return false;
+    }
+    next = next.nextElementSibling;
+  }
+  return next?.tagName === "TABLE";
 }
 
 function removeOriginalLinks(root: ParentNode): void {
@@ -381,10 +422,13 @@ async function parseTable(
   const occupied: Array<Array<DocxTableCell | undefined>> = [];
   const tableRows: DocxTableRow[] = [];
   let columnCount = 0;
+  const hasExplicitHeader = Boolean(table.querySelector("thead, th"));
 
   for (let rowIndex = 0; rowIndex < rows.length; rowIndex += 1) {
     const row = rows[rowIndex];
-    const rowHeader = row.parentElement?.tagName === "THEAD";
+    const rowHeader =
+      row.parentElement?.tagName === "THEAD" ||
+      (!hasExplicitHeader && rowIndex === 0);
     const cells: DocxTableCell[] = [];
     let columnIndex = 0;
     for (const cellElement of [
@@ -402,11 +446,20 @@ async function parseTable(
         Math.max(1, positiveInteger(cellElement.getAttribute("rowspan"))),
       );
       const header = rowHeader || cellElement.tagName === "TH";
+      const cellStyle = (cellElement as HTMLElement).style;
+      const padding = cellStyle.padding.match(/^(\d+(?:\.\d+)?)px$/i);
       const cell: DocxTableCell = {
         runs: trimRuns(inlineRuns(cellElement)),
         columnSpan,
         rowSpan,
         header,
+        ...(cellStyle.textAlign === "left" ||
+        cellStyle.textAlign === "center" ||
+        cellStyle.textAlign === "right"
+          ? { alignment: cellStyle.textAlign }
+          : {}),
+        ...(padding ? { paddingPt: Number(padding[1]) * 0.75 } : {}),
+        ...(cellStyle.border ? { border: true } : {}),
       };
       cells.push(cell);
       for (

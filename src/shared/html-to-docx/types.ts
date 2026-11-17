@@ -22,6 +22,9 @@ export interface InlineRun {
   subscript?: boolean;
   superscript?: boolean;
   code?: boolean;
+  fontFamily?: string;
+  fontSizePt?: number;
+  color?: string;
   href?: string;
   anchor?: string;
   lineBreak?: boolean;
@@ -36,6 +39,9 @@ export interface DocxTableCell {
   columnSpan: number;
   rowSpan: number;
   header: boolean;
+  alignment?: "left" | "center" | "right";
+  paddingPt?: number;
+  border?: boolean;
 }
 
 export interface DocxTableRow {
@@ -93,6 +99,7 @@ export interface DocxSettings {
   headingFontSizePt: number;
   subheadingFontSizePt: number;
   tableFontSizePt: number;
+  tableLineSpacing: number;
   lineSpacing: number;
   spaceAfterPt: number;
   alignment: "left" | "justify";
@@ -106,6 +113,7 @@ export interface DocxSettings {
   pageNumbers: boolean;
   pageBreakBeforeH1: boolean;
   keepHeadingsWithNext: boolean;
+  excludedSectionKeywords: string[];
 }
 
 export interface ExportProgress {

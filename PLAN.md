@@ -16,16 +16,16 @@
    sharing the built-in editor and the optional Node-served editor.
 6. **Publish releases** — Automate checks, build, package staging, and GitHub
    Release ZIP publication for version tags.
+7. **Publish the first release** — Publish the `0.1.0` package from the
+   matching `v0.1.0` tag.
 
 ## Next
 
-1. **Prepare a release candidate** — Run the documented test, typecheck, lint,
-   and build commands; verify the generated extension loads from `dist/extension`.
+1. **Publish the updated sharing package** — Release a new version containing
+   the persistent Windows server launcher and simplified Node.js instructions.
 2. **Manual Chrome validation** — Test extraction, formatting settings,
    source-link behavior, internal figure/table navigation, DOCX opening, and
    optional writing-assistant mode with the Node server both running and
    stopped.
-3. **Publish the first release** — Validate the release workflow and publish
-   the current `0.1.0` package from a matching `v0.1.0` tag.
-4. **Consider Chrome Web Store distribution** — Follow Chrome's current
+3. **Consider Chrome Web Store distribution** — Follow Chrome's current
    publishing requirements if automatic extension updates are desired.

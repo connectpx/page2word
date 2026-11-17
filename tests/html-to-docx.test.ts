@@ -6,10 +6,51 @@ import { createDocxDocument } from "../src/shared/html-to-docx/document";
 import { parseHtmlToDocxBlocks } from "../src/shared/html-to-docx/parse";
 import {
   DEFAULT_DOCX_SETTINGS,
+  DOCX_SETTINGS_VERSION,
   resolveDocxSettings,
+  resolveStoredDocxSettings,
+  shouldExcludeSectionTitle,
 } from "../src/shared/html-to-docx/settings";
 
 describe("HTML to DOCX export", () => {
+  it("migrates the previously saved 13-point subheading default", () => {
+    expect(
+      resolveStoredDocxSettings({ subheadingFontSizePt: 13 }, undefined)
+        .subheadingFontSizePt,
+    ).toBe(12);
+    expect(
+      resolveStoredDocxSettings(
+        { subheadingFontSizePt: 13 },
+        DOCX_SETTINGS_VERSION,
+      ).subheadingFontSizePt,
+    ).toBe(13);
+  });
+
+  it("normalizes section-exclusion keywords and matches title substrings", () => {
+    const settings = resolveDocxSettings({
+      excludedSectionKeywords: [
+        " Declaration of Generative AI ",
+        "references",
+        "REFERENCES",
+        "",
+      ],
+    });
+
+    expect(settings.excludedSectionKeywords).toEqual([
+      "Declaration of Generative AI",
+      "references",
+    ]);
+    expect(
+      shouldExcludeSectionTitle(
+        "Declaration of Generative AI and AI-assisted technologies in the writing process",
+        settings.excludedSectionKeywords,
+      ),
+    ).toBe(true);
+    expect(
+      shouldExcludeSectionTitle("Methods", settings.excludedSectionKeywords),
+    ).toBe(false);
+  });
+
   it("removes original links by default and creates internal figure/table links", async () => {
     const dom = new JSDOM("");
     const blocks = await parseHtmlToDocxBlocks(
@@ -26,7 +67,7 @@ describe("HTML to DOCX export", () => {
     expect(blocks[0]).toMatchObject({
       runs: [
         { text: "See " },
-        { text: "Fig. 1", anchor: "p2w_figure_1" },
+        { text: "Figure 1", anchor: "p2w_figure_1" },
         { text: " and " },
         { text: "Table 1", anchor: "p2w_table_1" },
         { text: ". " },
@@ -122,6 +163,78 @@ describe("HTML to DOCX export", () => {
     dom.window.close();
   });
 
+  it("exports inline font family, size, weight, and color", async () => {
+    const dom = new JSDOM("");
+    const blocks = await parseHtmlToDocxBlocks(
+      [
+        '<p><span style="font-family: Arial; font-size: 18pt; font-weight: 700; color: #123456">Styled text</span></p>',
+      ],
+      dom.window.document,
+    );
+
+    expect(blocks[0]).toMatchObject({
+      runs: [
+        {
+          text: "Styled text",
+          fontFamily: "Arial",
+          fontSizePt: 18,
+          bold: true,
+          color: "123456",
+        },
+      ],
+    });
+
+    const document = createDocxDocument(
+      blocks,
+      { title: "Inline styling" },
+      { ...DEFAULT_DOCX_SETTINGS, includeTitle: false },
+    );
+    const archive = await Packer.toBuffer(document);
+    const documentXml = readZipEntry(archive, "word/document.xml");
+    expect(documentXml).toContain('w:ascii="Arial"');
+    expect(documentXml).toContain('w:sz w:val="36"');
+    expect(documentXml).toContain('w:color w:val="123456"');
+    dom.window.close();
+  });
+
+  it("exports edited table alignment, padding, and borders", async () => {
+    const dom = new JSDOM("");
+    const blocks = await parseHtmlToDocxBlocks(
+      [
+        '<table><tbody><tr><td style="font-size: 14pt; text-align: center; padding: 0px; border: 1px solid #202124">Styled cell</td></tr></tbody></table>',
+      ],
+      dom.window.document,
+    );
+
+    expect(blocks[0]).toMatchObject({
+      kind: "table",
+      rows: [
+        {
+          cells: [
+            {
+              alignment: "center",
+              paddingPt: 0,
+              border: true,
+              runs: [{ text: "Styled cell", fontSizePt: 14 }],
+            },
+          ],
+        },
+      ],
+    });
+
+    const document = createDocxDocument(
+      blocks,
+      { title: "Table properties" },
+      { ...DEFAULT_DOCX_SETTINGS, includeTitle: false },
+    );
+    const archive = await Packer.toBuffer(document);
+    const documentXml = readZipEntry(archive, "word/document.xml");
+    expect(documentXml).toContain('<w:jc w:val="center"/>');
+    expect(documentXml).toContain('<w:tcMar><w:top w:type="dxa" w:w="0"');
+    expect(documentXml).toContain('<w:left w:val="single"');
+    dom.window.close();
+  });
+
   it("creates a valid DOCX archive with heading styles, numbering, links, and page setup", async () => {
     const dom = new JSDOM("");
     const blocks = await parseHtmlToDocxBlocks(
@@ -213,10 +326,10 @@ describe("HTML to DOCX export", () => {
     dom.window.close();
   });
 
-  it("exports figure captions stored in nested paragraphs", async () => {
+  it("exports normalized figure captions stored in nested paragraphs", async () => {
     const dom = new JSDOM("");
     const caption =
-      "Fig. 2. Identity-citizenship-educational model: Main interrelationships expressed by the participants in the MCEfS program.";
+      "Figure 2. Identity-citizenship-educational model: Main interrelationships expressed by the participants in the MCEfS program.";
     const blocks = await parseHtmlToDocxBlocks(
       [
         '<figure><span><img src="https://example.test/figure.jpg" alt="Identity diagram"></span>' +
@@ -231,8 +344,8 @@ describe("HTML to DOCX export", () => {
       kind: "paragraph",
       style: "figureCaption",
       runs: [
-        { text: "Fig.", bold: true },
-        { text: caption.slice("Fig.".length) },
+        { text: "Figure", bold: true },
+        { text: caption.slice("Figure".length) },
       ],
     });
     const document = createDocxDocument(
@@ -243,16 +356,16 @@ describe("HTML to DOCX export", () => {
     const archive = await Packer.toBuffer(document);
     const documentXml = readZipEntry(archive, "word/document.xml");
     const stylesXml = readZipEntry(archive, "word/styles.xml");
-    expect(documentXml).toContain('<w:t xml:space="preserve">Fig.</w:t>');
+    expect(documentXml).toContain('<w:t xml:space="preserve">Figure</w:t>');
     expect(documentXml).toContain(
       '<w:t xml:space="preserve"> 2. Identity-citizenship-educational model: Main interrelationships expressed by the participants in the MCEfS program.</w:t>',
     );
-    expect(documentXml).toContain("Fig.");
+    expect(documentXml).toContain("Figure");
     expect(stylesXml).toMatch(
       /w:style[^>]*w:styleId="FigureCaption"[\s\S]*?w:pBdr[\s\S]*?w:bottom w:val="single"/,
     );
     expect(stylesXml).toMatch(
-      /w:style[^>]*w:styleId="FigureCaption"[\s\S]*?w:sz w:val="24"/,
+      /w:style[^>]*w:styleId="FigureCaption"[\s\S]*?w:sz w:val="22"/,
     );
     dom.window.close();
   });
@@ -264,8 +377,9 @@ describe("HTML to DOCX export", () => {
       fontSizePt: 12,
       titleFontSizePt: 16,
       headingFontSizePt: 14,
-      subheadingFontSizePt: 13,
+      subheadingFontSizePt: 12,
       tableFontSizePt: 10,
+      tableLineSpacing: 1,
       lineSpacing: 1.5,
       alignment: "justify",
     });
@@ -299,8 +413,13 @@ describe("HTML to DOCX export", () => {
     expect(stylesXml).toContain('w:sz w:val="24"');
     expect(stylesXml).toContain('w:sz w:val="32"');
     expect(stylesXml).toContain('w:sz w:val="28"');
-    expect(stylesXml).toContain('w:sz w:val="26"');
     expect(stylesXml).toContain('w:sz w:val="20"');
+    expect(stylesXml).toMatch(
+      /w:style[^>]*w:styleId="Heading3"[\s\S]*?w:sz w:val="24"/,
+    );
+    expect(stylesXml).toMatch(
+      /w:style[^>]*w:styleId="TableText"[\s\S]*?w:line="240"/,
+    );
     expect(stylesXml).toMatch(
       /w:style[^>]*w:styleId="Caption"[\s\S]*?w:sz w:val="24"/,
     );
@@ -334,6 +453,96 @@ describe("HTML to DOCX export", () => {
     expect(documentXml).toMatch(/w:pgSz[^>]*w:w="11906"[^>]*w:h="16838"/);
     expect(stylesXml).toContain("Times New Roman");
     expect(stylesXml).toContain('w:sz w:val="24"');
+  });
+
+  it("uses heading size for H2 and subheading size for H3 in DOCX", async () => {
+    const dom = new JSDOM("");
+    const blocks = await parseHtmlToDocxBlocks(
+      [
+        "<h2>3. Teaching skills and professional standards</h2>" +
+          "<h3>3.1. Research techniques through capstone</h3>",
+      ],
+      dom.window.document,
+    );
+    expect(
+      blocks.map((block) =>
+        block.kind === "paragraph" ? block.style : undefined,
+      ),
+    ).toEqual(["heading2", "heading3"]);
+
+    const document = createDocxDocument(
+      blocks,
+      { title: "Heading sizes" },
+      DEFAULT_DOCX_SETTINGS,
+    );
+    const archive = await Packer.toBuffer(document);
+    const stylesXml = readZipEntry(archive, "word/styles.xml");
+
+    expect(stylesXml).toMatch(
+      /w:style[^>]*w:styleId="Heading2"[\s\S]*?w:sz w:val="28"/,
+    );
+    expect(stylesXml).toMatch(
+      /w:style[^>]*w:styleId="Heading3"[\s\S]*?w:sz w:val="24"/,
+    );
+    dom.window.close();
+  });
+
+  it("formats table captions and first-row cells and adds table spacing and borders", async () => {
+    const dom = new JSDOM("");
+    const blocks = await parseHtmlToDocxBlocks(
+      [
+        "<p><b>Table 2.</b> Summary of findings.</p>" +
+          '<table id="p2w_table_2"><tr><td>Finding</td><td>Result</td></tr>' +
+          "<tr><td>Completion</td><td>High</td></tr></table>",
+      ],
+      dom.window.document,
+    );
+
+    expect(blocks[0]).toMatchObject({
+      kind: "paragraph",
+      style: "caption",
+      runs: [
+        { text: "Table 2.", bold: true },
+        { text: " Summary of findings." },
+      ],
+    });
+    expect(blocks[1]).toMatchObject({
+      kind: "table",
+      bookmark: "p2w_table_2",
+      rows: [
+        {
+          header: true,
+          cells: [{ header: true }, { header: true }],
+        },
+        { header: false, cells: [{ header: false }, { header: false }] },
+      ],
+    });
+
+    const document = createDocxDocument(
+      blocks,
+      { title: "Table formatting" },
+      DEFAULT_DOCX_SETTINGS,
+    );
+    const archive = await Packer.toBuffer(document);
+    const documentXml = readZipEntry(archive, "word/document.xml");
+    const stylesXml = readZipEntry(archive, "word/styles.xml");
+    expect(documentXml).not.toContain('w:anchor="p2w_table_2"');
+    expect(documentXml).toMatch(/w:tblBorders[\s\S]*?w:bottom w:val="single"/);
+    expect(documentXml).toMatch(
+      /<\/w:tbl><w:p[\s\S]*?<w:spacing(?=[^>]*w:before="120")(?=[^>]*w:after="0")(?=[^>]*w:line="240")[^>]*>/,
+    );
+    const tableRows = [...documentXml.matchAll(/<w:tr\b[\s\S]*?<\/w:tr>/g)];
+    expect(tableRows).toHaveLength(2);
+    expect(tableRows[1]?.[0]).toMatch(
+      /w:tcBorders[\s\S]*?w:bottom w:val="single"/,
+    );
+    expect(stylesXml).toMatch(
+      /w:style[^>]*w:styleId="TableText"[\s\S]*?w:line="240"/,
+    );
+    expect(stylesXml).not.toMatch(
+      /w:style[^>]*w:styleId="Caption"[\s\S]*?<w:i\/>/,
+    );
+    dom.window.close();
   });
 
   it("preserves table spans and embeds captured images in the DOCX package", async () => {

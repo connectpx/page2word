@@ -21,9 +21,28 @@
       <button type="button" id="extract-browser" class="secondary">
         Extract with Writing Assistants
       </button>
-      <p id="server-status" class="mode-note" role="status" aria-live="polite">
-        The editor server is checked when you choose this option.
-      </p>
+      <div class="server-panel">
+        <div class="server-row">
+          <p
+            id="server-status"
+            class="server-status"
+            data-state="checking"
+            role="status"
+            aria-live="polite"
+          >
+            <span class="server-dot" aria-hidden="true"></span>
+            <span id="server-status-text">Checking server…</span>
+          </p>
+          <button type="button" id="check-server" class="server-check">
+            Check
+          </button>
+        </div>
+        <p id="server-help" class="server-help" hidden>
+          To start it, double-click <strong>StartServer.bat</strong> in your
+          Page2Word folder. Chrome does not let extensions run local files. Then
+          click Check again.
+        </p>
+      </div>
       <button type="button" id="open-editor" class="secondary">
         Open Editor
       </button>
